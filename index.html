@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор прибыли Kaspi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --ink: #16202b;
+    --muted: #5d6b7a;
+    --line: #d9e0e7;
+    --accent: #0f766e;
+    --accent-soft: #e2f3f1;
+    --loss: #c2410c;
+    --loss-soft: #fdeee6;
+    --field: #f7f9fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1419;
+      --surface: #171e26;
+      --ink: #e8edf2;
+      --muted: #94a3b3;
+      --line: #2a3541;
+      --accent: #3ec5b6;
+      --accent-soft: #12332f;
+      --loss: #ff8a5c;
+      --loss-soft: #3a2218;
+      --field: #1d2630;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+  @media (min-width: 820px) { .grid { grid-template-columns: 5fr 6fr; } .result { position: sticky; top: 16px; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 14px; color: var(--muted); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .control { display: flex; align-items: center; background: var(--field); border: 1px solid var(--line); border-radius: 8px; }
+  .control:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+  .control input, .control select {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: inherit;
+    font: inherit; padding: 11px 12px; outline: none; font-variant-numeric: tabular-nums;
+  }
+  .control select { cursor: pointer; }
+  .control .unit { padding-right: 12px; color: var(--muted); font-size: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); cursor: pointer; margin-bottom: 14px; }
+  .check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+  .check b { font-weight: 500; display: block; }
+  .check span { font-size: 13px; color: var(--muted); }
+  .divider { height: 1px; background: var(--line); margin: 6px 0 16px; }
+
+  .headline { border-radius: 10px; padding: 18px; background: var(--accent-soft); margin-bottom: 18px; }
+  .headline.loss { background: var(--loss-soft); }
+  .headline .cap { font-size: 14px; color: var(--muted); }
+  .headline .big { font-size: 40px; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.15; margin: 4px 0; }
+  .headline.loss .big { color: var(--loss); }
+  .headline .unit-line { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); padding: 8px 0; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: right; font-weight: 500; font-size: 13px; color: var(--muted); padding: 0 0 8px; }
+  th:first-child { text-align: left; }
+  td { padding: 9px 0; border-top: 1px solid var(--line); text-align: right; font-size: 15px; white-space: nowrap; }
+  td:first-child { text-align: left; white-space: normal; padding-right: 10px; }
+  td.minus { color: var(--muted); }
+  tr.total td { font-weight: 600; border-top: 2px solid var(--ink); }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+  .metric { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .metric .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .metric .l { font-size: 13px; color: var(--muted); }
+  .metric .v.neg { color: var(--loss); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Калькулятор прибыли Kaspi</h1>
+  <p class="sub">Введите цены и доставку, и расчёт появится сразу. Комиссия Kaspi и тариф Zammler подставляются автоматически.</p>
+
+  <div class="grid">
+    <section class="panel" aria-label="Исходные данные">
+      <h2>Исходные данные</h2>
+
+      <div class="field">
+        <label for="kaspi">Цена на Kaspi</label>
+        <div class="control"><input id="kaspi" inputmode="decimal" placeholder="Например, 12 000" autocomplete="off"><span class="unit">₸</span></div>
+      </div>
+
+      <div class="field">
+        <label for="china">Цена на китайском маркетплейсе</label>
+        <div class="control"><input id="china" inputmode="decimal" placeholder="Например, 4 500" autocomplete="off"><span class="unit">₸</span></div>
+        <div class="hint">Цена за 1 шт. вместе с доставкой до Казахстана.</div>
+      </div>
+
+      <div class="field">
+        <label for="ship">Доставка из Китая до Астаны</label>
+        <div class="row2">
+          <div class="control"><input id="ship" inputmode="decimal" placeholder="0" autocomplete="off"><span class="unit">₸</span></div>
+          <div class="control">
+            <select id="shipMode" aria-label="Как считать доставку">
+              <option value="unit">за 1 шт.</option>
+              <option value="batch">за всю партию</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="qty">Количество</label>
+        <div class="control"><input id="qty" inputmode="numeric" value="1" autocomplete="off"><span class="unit">шт.</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label class="check">
+        <input type="checkbox" id="red">
+        <div><b>Рассрочка / Kaspi RED</b><span>Комиссия Kaspi вырастает с 16% до 19%.</span></div>
+      </label>
+
+      <div class="field" style="margin-bottom:0">
+        <label for="tax">Налог ИП</label>
+        <div class="control"><input id="tax" inputmode="decimal" value="0" autocomplete="off"><span class="unit">%</span></div>
+        <div class="hint">Считается от цены продажи на Kaspi. Оставьте 0, если налог не нужен.</div>
+      </div>
+    </section>
+
+    <section class="panel result" aria-label="Результат" aria-live="polite">
+      <h2>Результат</h2>
+      <div id="out"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const num = v => {
+    const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  };
+  const fmt = n => Math.round(n).toLocaleString('ru-RU') + '\u00a0₸';
+  const sfmt = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('ru-RU') + '\u00a0₸';
+  const pct = n => (Math.round(n * 10) / 10).toLocaleString('ru-RU') + '%';
+
+  // Тариф Zammler по цене на Kaspi (граница 10 000 относим к «до 10 000»)
+  function zammler(price) {
+    if (price <= 1000) return 57;
+    if (price <= 3000) return 173;
+    if (price <= 5000) return 231;
+    if (price <= 10000) return 927;
+    return 1507;
+  }
+
+  function calc() {
+    const price = num($('kaspi').value);
+    const china = num($('china').value);
+    const ship = num($('ship').value);
+    const qty = Math.max(1, Math.floor(num($('qty').value)) || 1);
+    const rate = 16 + ($('red').checked ? 3 : 0);
+    const taxRate = Math.max(0, num($('tax').value));
+    const out = $('out');
+
+    if (price <= 0 || china <= 0) {
+      out.innerHTML = '<p class="empty">Введите цену на Kaspi и цену в Китае, чтобы увидеть прибыль.</p>';
+      return;
+    }
+
+    const shipUnit = $('shipMode').value === 'unit' ? ship : ship / qty;
+    const commission = price * rate / 100;
+    const zam = zammler(price);
+    const tax = price * taxRate / 100;
+    const profitBeforeTax = price - commission - china - shipUnit - zam;
+    const profit = profitBeforeTax - tax;
+    const cost = china + shipUnit;
+    const margin = profit / price * 100;
+    const roi = profit / cost * 100;
+    const loss = profit < 0;
+
+    const rows = [
+      ['Цена на Kaspi', price, false],
+      [`Комиссия Kaspi (${rate}%)`, -commission, true],
+      ['Доставка Zammler покупателю', -zam, true],
+      ['Цена в Китае', -china, true],
+      ['Доставка до Астаны', -shipUnit, true],
+    ];
+    if (taxRate > 0) rows.push([`Налог ИП (${pct(taxRate)})`, -tax, true]);
+
+    const tr = ([label, v, minus]) => `
+      <tr>
+        <td>${label}</td>
+        <td class="${minus ? 'minus' : ''}">${minus ? '−' + fmt(Math.abs(v)) : fmt(v)}</td>
+        <td class="${minus ? 'minus' : ''}">${minus ? '−' + fmt(Math.abs(v) * qty) : fmt(v * qty)}</td>
+      </tr>`;
+
+    out.innerHTML = `
+      <div class="headline ${loss ? 'loss' : ''}">
+        <div class="cap">Чистая прибыль с партии (${qty} шт.)</div>
+        <div class="big">${sfmt(profit * qty)}</div>
+        <div class="unit-line">${sfmt(profit)} с одной штуки</div>
+      </div>
+      <table>
+        <thead><tr><th></th><th>за 1 шт.</th><th>за ${qty} шт.</th></tr></thead>
+        <tbody>
+          ${rows.map(tr).join('')}
+          <tr class="total"><td>Чистая прибыль</td><td>${sfmt(profit)}</td><td>${sfmt(profit * qty)}</td></tr>
+        </tbody>
+      </table>
+      <div class="metrics">
+        <div class="metric"><div class="v ${loss ? 'neg' : ''}">${pct(margin)}</div><div class="l">Маржа (от цены на Kaspi)</div></div>
+        <div class="metric"><div class="v ${loss ? 'neg' : ''}">${pct(roi)}</div><div class="l">ROI (от закупки и доставки)</div></div>
+      </div>
+      <div class="metric" style="margin-top:12px"><div class="v">${fmt(price - commission - zam)}</div><div class="l">Вы получаете за 1 шт. после комиссии Kaspi и доставки Zammler</div></div>
+      ${taxRate > 0 ? `<p class="note">Прибыль до налога: ${sfmt(profitBeforeTax)} с 1 шт.</p>` : ''}
+    `;
+  }
+
+  ['kaspi', 'china', 'ship', 'shipMode', 'qty', 'red', 'tax'].forEach(id => {
+    $(id).addEventListener('input', calc);
+    $(id).addEventListener('change', calc);
+  });
+  calc();
+</script>
+</body>
+</html>
